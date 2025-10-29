@@ -9,39 +9,37 @@ function safeNumber(v, fallback, { min = -Infinity, max = Infinity } = {}) {
   return clamp(n, min, max);
 }
 
-function makeCSVExcelFriendly(rows) {
-  const header = [
-    "tiempo [s]",
-    "x1 [m]",
-    "v1 [m/s]",
-    "x2 [m]",
-    "v2 [m/s]",
-    "K1 [J]",
-    "K2 [J]",
-    "Us [J]",
-    "Emec [J]",
-    "Ediss [J]",
-    "p_total [kg·m/s]"
+function makeCSV_ForExcel_Comma(rows) {
+  const headers = [
+    "tiempo",  "x1",   "v1",    "x2",   "v2",   "K1",  "K2",  "Us",  "Emec", "Ediss", "p_total"
   ];
-  const sep = ";";
-  const eol = "\r\n";
-  const body = rows.map(d =>
-    [
-      toFixedNum(d.t, 6),
-      toFixedNum(d.x1, 6),
-      toFixedNum(d.v1, 6),
-      toFixedNum(d.x2, 6),
-      toFixedNum(d.v2, 6),
-      toFixedNum(d.K1, 6),
-      toFixedNum(d.K2, 6),
-      toFixedNum(d.Us, 6),
-      toFixedNum(d.Emec, 6),
-      toFixedNum(d.Ediss, 6),
-      toFixedNum(d.p, 6)
-    ].join(sep)
-  );
-  const csv = "\uFEFF" + [header.join(sep), ...body].join(eol) + eol;
-  return csv;
+  const units   = [
+    "[s]",     "[m]",  "[m/s]", "[m]",  "[m/s]","[J]", "[J]", "[J]", "[J]",  "[J]",   "[kg·m/s]"
+  ];
+
+  const sep = ",";            // separador coma para Excel
+  const eol = "\r\n";         // CRLF
+  const fmt = (x) => Number.isFinite(x) ? Number(x).toFixed(6) : "";
+
+  const lines = [];
+  lines.push(headers.join(sep));
+  lines.push(units.join(sep));
+  for (const d of rows) {
+    lines.push([
+      fmt(d.t),
+      fmt(d.x1),
+      fmt(d.v1),
+      fmt(d.x2),
+      fmt(d.v2),
+      fmt(d.K1),
+      fmt(d.K2),
+      fmt(d.Us),
+      fmt(d.Emec),
+      fmt(d.Ediss),
+      fmt(d.p)
+    ].join(sep));
+  }
+  return "\uFEFF" + lines.join(eol) + eol; // BOM UTF-8
 }
 
 export default function SimuladorEnergiaColisiones1D() {
@@ -52,8 +50,8 @@ export default function SimuladorEnergiaColisiones1D() {
   const [mu, setMu] = useState(0.05);
   const [e, setE] = useState(0.85);
   const [g, setG] = useState(9.81);
-  const [dt, setDt] = useState(0.005);       // paso de integración (físico)
-  const [simSpeed, setSimSpeed] = useState(1); // velocidad visual (no afecta la física)
+  const [dt, setDt] = useState(0.005);        // paso de física fijo
+  const [simSpeed, setSimSpeed] = useState(1); // velocidad visual (no altera resultados)
 
   const L = 9;
   const springLen = 0.3;
@@ -112,12 +110,12 @@ export default function SimuladorEnergiaColisiones1D() {
     return { K1, K2, Us, Emec, Etot };
   }, [m1, m2, v1, v2, x1, k, springLen, Efric, Ecol]);
 
-  // --------- BUCLE CON PASO DE FÍSICA FIJO; simSpeed SOLO afecta ritmo visual ----------
+  // --------- Bucle con paso de física fijo; simSpeed SOLO acelera lo visual ----------
   useEffect(() => {
     let raf = null;
     let last = performance.now();
-    let accumulator = 0; // acumula tiempo *visual*
-    const h = clamp(dt, 0.001, 0.02); // paso físico fijo
+    let accumulator = 0;                 // tiempo visual acumulado
+    const h = clamp(dt, 0.001, 0.02);    // paso físico fijo
 
     const onVisibility = () => { if (document.hidden) setRunning(false); };
     document.addEventListener("visibilitychange", onVisibility);
@@ -223,10 +221,8 @@ export default function SimuladorEnergiaColisiones1D() {
       const frameDt = Math.min(0.05, (now - last) / 1000);
       last = now;
 
-      // simSpeed SOLO acelera el *avance visual* (acumulador), no el paso físico h
       accumulator += frameDt * clamp(simSpeed, 0.25, 4);
 
-      // integra física con paso fijo h
       let safety = 0;
       while (accumulator >= h && safety < 2000) {
         physicsStep(h);
@@ -234,7 +230,6 @@ export default function SimuladorEnergiaColisiones1D() {
         safety++;
       }
 
-      // refresco de series ~20 fps
       if (now - lastChartUpdateRef.current > 50) {
         lastChartUpdateRef.current = now;
         setSeries(seriesRef.current.slice(-2000));
@@ -342,7 +337,7 @@ export default function SimuladorEnergiaColisiones1D() {
     ctx.fillText(`E. potencial elástica (Us) = ${energies.Us.toFixed(3)} J`, panelX + 14, panelY + 68);
     ctx.fillText(`E. cinética = ${(energies.K1 + energies.K2).toFixed(3)} J`, panelX + 14, panelY + 88);
     ctx.fillText(`E. disipada = ${(Efric + Ecol).toFixed(3)} J`, panelX + 14, panelY + 108);
-    ctx.fillText(`E. total ≈ ${ (energies.Emec + Efric + Ecol).toFixed(3)} J`, panelX + 14, panelY + 128);
+    ctx.fillText(`E. total ≈ ${(energies.Emec + Efric + Ecol).toFixed(3)} J`, panelX + 14, panelY + 128);
   }, [x1, x2, v1, v2, t, energies, Efric, Ecol, m1]);
 
   const numberInput = (label, value, setter, step, min, max, hint) => (
@@ -362,7 +357,7 @@ export default function SimuladorEnergiaColisiones1D() {
   );
 
   const exportCSV = () => {
-    const csv = makeCSVExcelFriendly(seriesRef.current);
+    const csv = makeCSV_ForExcel_Comma(seriesRef.current);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -496,3 +491,4 @@ export default function SimuladorEnergiaColisiones1D() {
     </div>
   );
 }
+
