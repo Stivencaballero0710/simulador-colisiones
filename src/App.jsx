@@ -128,8 +128,8 @@ export default function SimuladorEnergiaColisiones1D() {
       let _Efr = EfricRef.current;
       let _Ecol = EcolRef.current;
 
-      const M1 = clamp(m1, 0.05, 50);
-      const M2 = clamp(m2, 0.05, 50);
+      const M1 = clamp(m1, 0.05, 500);
+      const M2 = clamp(m2, 0.05, 500);
       const K = clamp(k, 0, 1e4);
       const MU = clamp(mu, 0, 1);
       const E_ = clamp(e, 0, 1);
@@ -423,9 +423,9 @@ export default function SimuladorEnergiaColisiones1D() {
         <div className="card" style={{ padding: 16 }}>
           <div className="h2" style={{ marginBottom: 8 }}>Parámetros</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
-            {numberInput("Masa carrito 1 (kg)", m1, setM1, 0.05, 0.05, 50, "m1")}
-            {numberInput("Masa carrito 2 (kg)", m2, setM2, 0.05, 0.05, 50, "m2")}
-            {numberInput("Constante del resorte k (N/m)", k, setK, 1, 0, 10000, "Rigidez")}
+            {numberInput("Masa carrito 1 (kg)", m1, setM1, 0.05, 0.05, 500, "m1")}
+            {numberInput("Masa carrito 2 (kg)", m2, setM2, 0.05, 0.05, 500, "m2")}
+            {numberInput("Constante del resorte k (N/m)", k, setK, 1, 0, 10000000000, "Rigidez")}
             {numberInput("Compresión inicial del resorte x₀ (m)", x0, setX0, 0.005, 0.01, 0.45, "x0")}
             {numberInput("Coeficiente de fricción μ", mu, setMu, 0.005, 0, 1, "0–1")}
             {numberInput("Coeficiente de restitución e", e, setE, 0.01, 0, 1, "0 inelástica, 1 elástica")}
